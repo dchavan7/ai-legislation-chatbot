@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Legislation Explorer</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #001f5b;
+    --navy-mid: #003399;
+    --navy-light: #1a56b0;
+    --sky: #4d87d6;
+    --cream: #f5f2eb;
+    --gold: #c9a84c;
+    --white: #ffffff;
+    --gray: #8a9bb5;
+    --bg: #f7f5f0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* HEADER */
+  header {
+    width: 100%;
+    background: var(--navy);
+    padding: 28px 40px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 220px; height: 220px;
+    border-radius: 50%;
+    border: 40px solid rgba(77,135,214,0.12);
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 10%;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    border: 30px solid rgba(201,168,76,0.1);
+  }
+
+  .header-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 10px;
+  }
+
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(22px, 4vw, 36px);
+    color: var(--white);
+    text-align: center;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
+  }
+
+  header h1 span { color: var(--gold); }
+
+  .header-sub {
+    font-size: 13px;
+    color: var(--sky);
+    margin-top: 8px;
+    font-weight: 300;
+    letter-spacing: 0.5px;
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    width: 100%;
+    background: var(--navy-mid);
+    display: flex;
+    justify-content: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+
+  .stat-item {
+    padding: 12px 28px;
+    text-align: center;
+    border-right: 1px solid rgba(255,255,255,0.1);
+  }
+
+  .stat-item:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--gold);
+    display: block;
+  }
+
+  .stat-label {
+    font-size: 10px;
+    color: rgba(255,255,255,0.6);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* MAIN LAYOUT */
+  .main {
+    width: 100%;
+    max-width: 900px;
+    padding: 32px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--navy);
+    border-radius: 12px;
+    padding: 4px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 9px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    background: transparent;
+    color: var(--gray);
+  }
+
+  .tab.active {
+    background: var(--white);
+    color: var(--navy);
+    font-weight: 500;
+  }
+
+  /* PANELS */
+  .panel { display: none; }
+  .panel.active { display: flex; flex-direction: column; gap: 16px; }
+
+  /* CHAT */
+  .chat-container {
+    background: var(--white);
+    border-radius: 16px;
+    border: 1px solid rgba(0,31,91,0.1);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 480px;
+    box-shadow: 0 4px 24px rgba(0,31,91,0.08);
+  }
+
+  .chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    scroll-behavior: smooth;
+  }
+
+  .chat-messages::-webkit-scrollbar { width: 4px; }
+  .chat-messages::-webkit-scrollbar-track { background: transparent; }
+  .chat-messages::-webkit-scrollbar-thumb { background: var(--sky); border-radius: 2px; }
+
+  .message {
+    display: flex;
+    gap: 12px;
+    animation: fadeUp 0.3s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user { flex-direction: row-reverse; }
+
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500;
+  }
+
+  .avatar.bot { background: var(--navy); color: var(--gold); }
+  .avatar.user { background: var(--sky); color: var(--white); }
+
+  .bubble {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 16px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .message.bot .bubble {
+    background: var(--cream);
+    color: var(--navy);
+    border-bottom-left-radius: 4px;
+  }
+
+  .message.user .bubble {
+    background: var(--navy);
+    color: var(--white);
+    border-bottom-right-radius: 4px;
+  }
+
+  .typing-indicator {
+    display: flex;
+    gap: 4px;
+    padding: 4px 0;
+  }
+
+  .typing-indicator span {
+    width: 7px; height: 7px;
+    background: var(--navy-light);
+    border-radius: 50%;
+    animation: bounce 1.2s infinite;
+  }
+
+  .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+  .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 60%, 100% { transform: translateY(0); }
+    30% { transform: translateY(-6px); }
+  }
+
+  /* SUGGESTED QUESTIONS */
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 24px;
+    border-top: 1px solid rgba(0,31,91,0.06);
+    background: rgba(245,242,235,0.5);
+  }
+
+  .suggestion-btn {
+    padding: 6px 12px;
+    background: transparent;
+    border: 1px solid var(--navy-light);
+    border-radius: 20px;
+    font-size: 12px;
+    color: var(--navy-mid);
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', sans-serif;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .suggestion-btn:hover {
+    background: var(--navy);
+    color: var(--white);
+    border-color: var(--navy);
+  }
+
+  /* CHAT INPUT */
+  .chat-input-row {
+    display: flex;
+    gap: 10px;
+    padding: 16px 20px;
+    border-top: 1px solid rgba(0,31,91,0.08);
+    background: var(--white);
+  }
+
+  .chat-input {
+    flex: 1;
+    padding: 12px 16px;
+    border: 1.5px solid rgba(0,31,91,0.15);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--navy);
+    outline: none;
+    transition: border-color 0.2s;
+    background: var(--bg);
+  }
+
+  .chat-input:focus { border-color: var(--navy-light); }
+
+  .send-btn {
+    padding: 12px 20px;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 1px;
+    transition: background 0.2s;
+  }
+
+  .send-btn:hover { background: var(--navy-mid); }
+  .send-btn:disabled { background: var(--gray); cursor: not-allowed; }
+
+  /* PREDICTOR PANEL */
+  .predictor-card {
+    background: var(--white);
+    border-radius: 16px;
+    border: 1px solid rgba(0,31,91,0.1);
+    padding: 28px;
+    box-shadow: 0 4px 24px rgba(0,31,91,0.08);
+  }
+
+  .predictor-card h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--navy);
+    font-size: 20px;
+    margin-bottom: 6px;
+  }
+
+  .predictor-card p {
+    color: var(--gray);
+    font-size: 13px;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--navy);
+    font-weight: 500;
+  }
+
+  select, textarea {
+    padding: 10px 14px;
+    border: 1.5px solid rgba(0,31,91,0.15);
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--navy);
+    background: var(--bg);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  select:focus, textarea:focus { border-color: var(--navy-light); }
+
+  textarea { resize: vertical; min-height: 80px; }
+
+  .predict-btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    transition: all 0.2s;
+  }
+
+  .predict-btn:hover { background: var(--navy-mid); }
+  .predict-btn:disabled { background: var(--gray); cursor: not-allowed; }
+
+  /* RESULT */
+  .result-box {
+    margin-top: 20px;
+    padding: 20px;
+    border-radius: 12px;
+    border-left: 4px solid var(--navy);
+    background: var(--cream);
+    display: none;
+    animation: fadeUp 0.4s ease;
+  }
+
+  .result-box.show { display: block; }
+
+  .result-stage {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--navy);
+    margin-bottom: 8px;
+  }
+
+  .result-stage span { color: var(--gold); }
+
+  .result-explanation {
+    font-size: 13px;
+    color: #444;
+    line-height: 1.6;
+  }
+
+  .stage-bar {
+    display: flex;
+    gap: 4px;
+    margin: 14px 0;
+  }
+
+  .stage-step {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: rgba(0,31,91,0.12);
+    transition: background 0.4s;
+  }
+
+  .stage-step.filled { background: var(--navy); }
+
+  /* FOOTER */
+  footer {
+    width: 100%;
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--gray);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 1px;
+    border-top: 1px solid rgba(0,31,91,0.08);
+    margin-top: auto;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .stat-item { padding: 10px 16px; }
+    .stat-num { font-size: 16px; }
+  }
+
+  /* DISCLAIMER MODAL */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 15, 45, 0.75);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999;
+    padding: 20px;
+  }
+
+  .modal {
+    background: var(--white);
+    border-radius: 20px;
+    max-width: 480px;
+    width: 100%;
+    overflow: hidden;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.3);
+    animation: fadeUp 0.4s ease;
+  }
+
+  .modal-header {
+    background: var(--navy);
+    padding: 24px 28px 20px;
+  }
+
+  .modal-header .header-tag {
+    margin-bottom: 8px;
+  }
+
+  .modal-header h2 {
+    font-family: 'Playfair Display', serif;
+    color: var(--white);
+    font-size: 22px;
+  }
+
+  .modal-body {
+    padding: 24px 28px;
+  }
+
+  .modal-body p {
+    font-size: 14px;
+    color: #444;
+    line-height: 1.7;
+    margin-bottom: 14px;
+  }
+
+  .modal-body p:last-of-type { margin-bottom: 0; }
+
+  .modal-body strong { color: var(--navy); }
+
+  .modal-footer {
+    padding: 16px 28px 24px;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .modal-btn {
+    padding: 12px 28px;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    transition: background 0.2s;
+  }
+
+  .modal-btn:hover { background: var(--navy-mid); }
+</style>
+</head>
+<body>
+
+<!-- DISCLAIMER MODAL -->
+<div class="modal-overlay" id="disclaimerModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="header-tag">⚠ Research Disclaimer</div>
+      <h2>Before You Explore</h2>
+    </div>
+    <div class="modal-body">
+      <p>This tool was developed as part of an academic research project analyzing AI-related federal legislation from the 115th through 118th sessions of Congress (2017–2025).</p>
+      <p><strong>The information presented here is intended for research and educational purposes only.</strong> Predictions, statistics, and chatbot responses may not be fully accurate and should not be used as a basis for legal, political, or policy decisions.</p>
+      <p>All findings are derived from a computational analysis of 1,033 bills using natural language processing and machine learning models, which carry inherent limitations. Please interpret results accordingly.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn" onclick="closeDisclaimer()">I Understand — Continue →</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div class="header-tag">Research Showcase · AI Policy Lab</div>
+  <h1>AI Legislation <span>Explorer</span></h1>
+  <div class="header-sub">115th – 118th Congress · 2017–2025 · 1,033 Bills Analyzed</div>
+</header>
+
+<div class="stats-bar">
+  <div class="stat-item">
+    <span class="stat-num">1,033</span>
+    <span class="stat-label">Bills Analyzed</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">4 Sessions</span>
+    <span class="stat-label">115th – 118th Congress</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">1.45%</span>
+    <span class="stat-label">Overall Enactment Rate</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">0%</span>
+    <span class="stat-label">AI-Specific Bills Enacted</span>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('chat')">💬 Ask the Research</button>
+    <button class="tab" onclick="switchTab('predict')">🔮 Predict a Bill</button>
+  </div>
+
+  <!-- CHAT PANEL -->
+  <div class="panel active" id="panel-chat">
+    <div class="chat-container">
+      <div class="chat-messages" id="chatMessages">
+        <div class="message bot">
+          <div class="avatar bot">AI</div>
+          <div class="bubble">
+            Hello! I'm an expert on AI legislation in Congress from 2017 to 2025. I can tell you about specific bills, explain trends across congressional sessions, discuss what predicts legislative success, and more. What would you like to know?
+          </div>
+        </div>
+      </div>
+
+      <div class="suggestions" id="suggestions">
+        <button class="suggestion-btn" onclick="askSuggestion(this)">Which AI bills were enacted?</button>
+        <button class="suggestion-btn" onclick="askSuggestion(this)">What predicts a bill advancing?</button>
+        <button class="suggestion-btn" onclick="askSuggestion(this)">How has bill volume changed?</button>
+        <button class="suggestion-btn" onclick="askSuggestion(this)">Senate vs House success rates</button>
+        <button class="suggestion-btn" onclick="askSuggestion(this)">Why do AI bills fail?</button>
+      </div>
+
+      <div class="chat-input-row">
+        <input type="text" class="chat-input" id="chatInput"
+               placeholder="Ask about AI legislation..."
+               onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREDICT PANEL -->
+  <div class="panel" id="panel-predict">
+    <div class="predictor-card">
+      <h2>Bill Advancement Predictor</h2>
+      <p>Enter the characteristics of an AI-related bill to predict how far it is likely to advance through Congress, based on patterns from 1,033 bills analyzed between 2017 and 2025.</p>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Chamber of Origin</label>
+          <select id="p-chamber">
+            <option value="Senate">Senate</option>
+            <option value="House">House</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Bill Type</label>
+          <select id="p-billtype">
+            <option value="S">S — Senate Bill</option>
+            <option value="HR">HR — House Bill</option>
+            <option value="SRES">SRES — Senate Resolution</option>
+            <option value="HRES">HRES — House Resolution</option>
+            <option value="SJRES">SJRES — Senate Joint Resolution</option>
+            <option value="HJRES">HJRES — House Joint Resolution</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Policy Topic</label>
+          <select id="p-topic">
+            <option value="cybersecurity and digital infrastructure">Cybersecurity & Digital Infrastructure</option>
+            <option value="data privacy and personal information protection">Data Privacy & Personal Information</option>
+            <option value="technology and internet regulation">Technology & Internet Regulation</option>
+            <option value="artificial intelligence and machine learning policy">AI & Machine Learning Policy</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Congress Session</label>
+          <select id="p-congress">
+            <option value="119">119th Congress (2025–2027)</option>
+            <option value="118">118th Congress (2023–2025)</option>
+            <option value="117">117th Congress (2021–2023)</option>
+            <option value="116">116th Congress (2019–2021)</option>
+            <option value="115">115th Congress (2017–2019)</option>
+          </select>
+        </div>
+
+        <div class="form-group full">
+          <label>Bill Title or Description</label>
+          <textarea id="p-title" placeholder="e.g. Artificial Intelligence Safety and Transparency Act of 2025"></textarea>
+        </div>
+      </div>
+
+      <button class="predict-btn" id="predictBtn" onclick="predictBill()">Analyze This Bill →</button>
+
+      <div class="result-box" id="resultBox">
+        <div class="result-stage" id="resultStage"></div>
+        <div class="stage-bar" id="stageBar"></div>
+        <div class="result-explanation" id="resultExplanation"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>Research by Diksha Chavan · AI Federal Legislation Study · 115th–118th Congress</footer>
+
+<script>
+// ── DISCLAIMER ───────────────────────────────────────────────
+function closeDisclaimer() {
+  document.getElementById('disclaimerModal').style.display = 'none';
+}
+
+// ── OFFLINE KNOWLEDGE BASE ───────────────────────────────────
+const KB = [
+  {
+    keys: ['enacted','passed','became law','signed','which bills','list'],
+    answer: `Across all four sessions, 15 bills were enacted into law — just 1.45% of the 1,033 analyzed. Here are all 15:\n\n115th Congress: SJRES34 (FCC broadband privacy rule disapproval), HR1545 (VA Prescription Data Accountability Act), S770 (NIST Small Business Cybersecurity Act), HR3359 (Cybersecurity and Infrastructure Security Agency Act).\n\n116th Congress: HR1668 (IoT Cybersecurity Improvement Act), S1822 (Broadband DATA Act), S2746 (Law Enforcement Suicide Data Collection Act).\n\n117th Congress: S1687 (Small Business Cyber Training Act), HR3462 (SBA Cyber Awareness Act), S1917 (K-12 Cybersecurity Act), S2520 (State and Local Government Cybersecurity Act), S3059 (Courthouse Ethics and Transparency Act), HR7535 (Quantum Computing Cybersecurity Preparedness Act).\n\n118th Congress: HR670 (Think Differently Database Act), S1549 (Congressional Budget Office Data Access Act).`
+  },
+  {
+    keys: ['predict','advance','likely','chance','success','pass'],
+    answer: `Based on the ordinal regression model, the strongest predictors of a bill advancing are bill type and chamber of origin. Standard bills (HR or S) advance further than resolutions, and Senate-originated bills enact at 2.18% versus 0.97% for House bills. Bills framed around cybersecurity (5.41% enactment rate) or data privacy (1.20%) advance more than bills focused purely on AI (0%). More recent sessions are also associated with lower advancement rates.`
+  },
+  {
+    keys: ['volume','trend','grow','increase','session','over time','115','116','117','118'],
+    answer: `Bill volume grew dramatically across sessions: 146 bills in the 115th Congress, 263 in the 116th, 345 in the 117th, and 279 in the 118th. However enactment rates moved in the opposite direction — 2.74% in the 115th, 1.14% in the 116th, 1.74% in the 117th, and just 0.72% in the 118th. Congress is introducing more AI legislation than ever but passing less of it proportionally.`
+  },
+  {
+    keys: ['senate','house','chamber'],
+    answer: `Senate-originated bills had a meaningfully higher enactment rate (2.18%) compared to House-originated bills (0.97%) — more than double. Out of 412 Senate bills, 9 were enacted. Out of 621 House bills, only 6 were enacted. The Senate's smaller size and stronger individual member influence likely contribute to this structural advantage.`
+  },
+  {
+    keys: ['why','fail','die','never','most','majority','introduced only'],
+    answer: `98% of AI-related bills never advance past introduction. The core reasons identified in this research are: first, narrowly scoped AI-specific bills lack the broad political coalition needed to advance — no purely AI-focused bill has been enacted across any session. Second, enactment rates have declined as bill volume surged, suggesting the legislative pipeline is congested. Third, broadly framed technology bills (cybersecurity, data privacy) are structurally better positioned than direct AI regulation.`
+  },
+  {
+    keys: ['cybersecurity','cyber'],
+    answer: `Cybersecurity bills had the highest enactment rate of any topic at 5.41% — 6 enacted out of 111 bills. This is nearly 4x the overall average. The 117th Congress was especially productive for cybersecurity legislation, enacting four bills: the Small Business Cyber Training Act, SBA Cyber Awareness Act, K-12 Cybersecurity Act, and State and Local Government Cybersecurity Act.`
+  },
+  {
+    keys: ['data privacy','privacy','personal information'],
+    answer: `Data privacy bills had an enactment rate of 1.20% — 4 enacted out of 333 bills. This is slightly below the overall average of 1.45%. Enacted data privacy bills include the VA Prescription Data Accountability Act (115th), the Law Enforcement Suicide Data Collection Act (116th), the Think Differently Database Act, and the Congressional Budget Office Data Access Act (both 118th).`
+  },
+  {
+    keys: ['artificial intelligence','machine learning','ai specific','ai policy','ai bill'],
+    answer: `Bills specifically categorized as AI and machine learning policy had a 0% enactment rate — none of the 91 bills in this category were enacted across all four sessions. This is the most striking finding of the research: despite growing congressional interest in regulating AI directly, no purely AI-focused bill has become law. Bills that succeed tend to frame AI as one component of a broader cybersecurity or data privacy goal.`
+  },
+  {
+    keys: ['technology','internet','regulation','tech'],
+    answer: `Technology and internet regulation was the largest topic category with 498 bills, but had only a 1.00% enactment rate — 5 bills enacted. Enacted bills in this category include the FCC broadband privacy rule disapproval (115th), NIST Small Business Cybersecurity Act (115th), Broadband DATA Act (116th), and the Courthouse Ethics and Transparency Act (117th).`
+  },
+  {
+    keys: ['methodology','method','how','nlp','bart','model','xgboost','smote','machine learning','algorithm'],
+    answer: `The research used a multi-stage computational pipeline. First, keyword filtering scanned 1,033 bill titles and summaries for technology-related terms. Then BART (facebook/bart-large-mnli), a large language model, classified each bill into one of four policy topics using zero-shot classification. An ordinal regression model identified which structural features predict advancement, while an XGBoost classifier achieved 96% accuracy with precision of 0.25 and recall of 0.33 on enacted bills. SMOTE resampling and 5-fold cross-validation addressed class imbalance and ensured robust evaluation.`
+  },
+  {
+    keys: ['accuracy','performance','precision','recall','f1','score'],
+    answer: `The XGBoost model achieved 96% overall accuracy, but this headline figure is misleading due to class imbalance — 98% of bills are never enacted, so predicting "introduced only" always scores well. The more meaningful metrics are on enacted bills specifically: precision of 0.25 (when the model predicted enactment, it was correct 1 in 4 times) and recall of 0.33 (it correctly identified 1 in 3 enacted bills). Given that enacted bills represent less than 2% of the dataset, this represents genuine predictive signal above random chance.`
+  },
+  {
+    keys: ['coefficient','predictor','feature','important','regression','ordinal'],
+    answer: `The ordinal regression model identified bill type as the strongest positive predictor (coefficient: 0.253) — standard bills advance further than resolutions. Chamber was also positive (0.074), confirming Senate bills do better. The strongest negative predictor was BART confidence score (-0.463), meaning narrowly focused AI bills are less likely to advance. Congress session number was also negative (-0.288), reflecting declining enactment rates in more recent sessions.`
+  },
+  {
+    keys: ['limitation','limit','problem','weakness','small','data'],
+    answer: `The primary limitation of this research is dataset size. With only 15 enacted bills across four sessions, the model has very little minority class signal to learn from. The class imbalance — 98% non-enacted — means even with SMOTE resampling, predictive performance on enacted bills is constrained. Future research should expand to earlier congressional sessions (111th–114th) and potentially incorporate state-level legislation to increase the volume of positive training examples.`
+  },
+  {
+    keys: ['finding','result','conclusion','summary','overall','central'],
+    answer: `The central finding is that Congress is introducing AI legislation at an accelerating rate — bill volume grew 140% from the 115th to 117th session — but enactment rates have fallen sharply from 2.74% to 0.72%. No purely AI-focused bill has been enacted. The bills most likely to advance are Senate-originated, broadly framed around cybersecurity or data privacy rather than AI specifically, and introduced as standard bills rather than resolutions.`
+  },
+  {
+    keys: ['117th','2021','2022'],
+    answer: `The 117th Congress (2021–2023) was the most active session for AI-related legislation, with 345 bills introduced — the highest across all four sessions. It also had the most enacted bills at 6, though its enactment rate of 1.74% was still well below the 115th session's 2.74%. Four of the six enacted bills were cybersecurity-focused, reflecting the strong congressional interest in cyber defense during this period.`
+  },
+  {
+    keys: ['118th','2023','2024','recent'],
+    answer: `The 118th Congress (2023–2025) had the lowest enactment rate of any session at 0.72% — just 2 bills enacted out of 279 introduced. Both were data privacy bills: the Think Differently Database Act (HR670) and the Congressional Budget Office Data Access Act (S1549). The low rate partly reflects that bills introduced late in the session had less time to advance before the session ended.`
+  },
+  {
+    keys: ['115th','2017','2018'],
+    answer: `The 115th Congress (2017–2019) had the highest enactment rate at 2.74% — 4 bills enacted out of 146 introduced. It was the smallest session by volume but the most efficient at converting introductions into law. The enacted bills covered broadband privacy, VA data accountability, small business cybersecurity, and the creation of the Cybersecurity and Infrastructure Security Agency (CISA).`
+  },
+  {
+    keys: ['116th','2019','2020'],
+    answer: `The 116th Congress (2019–2021) introduced 263 AI-relevant bills with an enactment rate of 1.14% — 3 bills enacted. The enacted bills were the IoT Cybersecurity Improvement Act, the Broadband DATA Act, and the Law Enforcement Suicide Data Collection Act. This session saw a significant jump in bill introductions compared to the 115th.`
+  }
+];
+
+// ── FALLBACK RESPONSES ────────────────────────────────────────
+const FALLBACKS = [
+  "That's a great question. This research focuses on AI-related federal legislation from 2017 to 2025 across the 115th–118th Congress. Try asking about enacted bills, enactment rates by topic or chamber, methodology, or the key findings.",
+  "I don't have specific data on that in my knowledge base. I can best answer questions about bill trends, enactment rates, the 15 enacted bills, what predicts advancement, or the research methodology.",
+  "I'm not sure about that specific question. Some things I can help with: which bills were enacted, how Senate vs House bills compare, why most AI bills fail, or how the NLP model works.",
+];
+let fallbackIndex = 0;
+
+function getResponse(input) {
+  const lower = input.toLowerCase();
+  for (const entry of KB) {
+    if (entry.keys.some(k => lower.includes(k))) {
+      return entry.answer;
+    }
+  }
+  const resp = FALLBACKS[fallbackIndex % FALLBACKS.length];
+  fallbackIndex++;
+  return resp;
+}
+
+// ── CHAT STATE ───────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function askSuggestion(btn) {
+  document.getElementById('chatInput').value = btn.textContent;
+  sendMessage();
+}
+
+function appendMessage(role, text) {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'message ' + role;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar ' + (role === 'bot' ? 'bot' : 'user');
+  avatar.textContent = role === 'bot' ? 'AI' : 'You';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  // Preserve line breaks in responses
+  bubble.style.whiteSpace = 'pre-line';
+  bubble.textContent = text;
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function showTyping() {
+  const container = document.getElementById('chatMessages');
+  const div = document.createElement('div');
+  div.className = 'message bot';
+  div.id = 'typing-msg';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'avatar bot';
+  avatar.textContent = 'AI';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-msg');
+  if (el) el.remove();
+}
+
+function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  input.value = '';
+  document.getElementById('suggestions').style.display = 'none';
+  appendMessage('user', text);
+  showTyping();
+
+  // Simulate a short typing delay for realism
+  setTimeout(() => {
+    removeTyping();
+    const reply = getResponse(text);
+    appendMessage('bot', reply);
+  }, 600 + Math.random() * 400);
+}
+
+// ── RULE-BASED PREDICTOR ─────────────────────────────────────
+function predictBill() {
+  const chamber    = document.getElementById('p-chamber').value;
+  const billType   = document.getElementById('p-billtype').value;
+  const topic      = document.getElementById('p-topic').value;
+  const congress   = parseInt(document.getElementById('p-congress').value);
+
+  // Enactment rates from research data
+  const topicRates = {
+    'cybersecurity and digital infrastructure': 5.41,
+    'data privacy and personal information protection': 1.20,
+    'technology and internet regulation': 1.00,
+    'artificial intelligence and machine learning policy': 0.00
+  };
+
+  const topicRate    = topicRates[topic] || 0;
+  const chamberBonus = chamber === 'Senate' ? 1.2 : 0;
+  const typeBonus    = ['S','HR'].includes(billType) ? 1.0 : 0;
+  const sessionPenalty = (congress - 115) * 0.4;
+  const score = topicRate + chamberBonus + typeBonus - sessionPenalty;
+
+  // Determine stage and label
+  let stage, stageLabel, color;
+  if (score >= 4.5) {
+    stage = 2; stageLabel = 'Relatively Strong Chance of Advancement'; color = '#001f5b';
+  } else if (score >= 2.0) {
+    stage = 1; stageLabel = 'May Reach Committee Stage'; color = '#003399';
+  } else {
+    stage = 0; stageLabel = 'Likely to Remain at Introduction'; color = '#4d87d6';
+  }
+
+  // Build explanation from research data
+  const topicLabel = {
+    'cybersecurity and digital infrastructure': 'Cybersecurity & Digital Infrastructure',
+    'data privacy and personal information protection': 'Data Privacy & Personal Information',
+    'technology and internet regulation': 'Technology & Internet Regulation',
+    'artificial intelligence and machine learning policy': 'AI & Machine Learning Policy'
+  }[topic];
+
+  const chamberRate = chamber === 'Senate' ? '2.18%' : '0.97%';
+  const sessionRates = { 115: '2.74%', 116: '1.14%', 117: '1.74%', 118: '0.72%', 119: 'est. <0.72%' };
+  const sessionRate = sessionRates[congress] || 'declining trend';
+  const typeNote = ['S','HR'].includes(billType)
+    ? `Standard bill format (${billType}) is a positive signal — bills of this type advance further than resolutions.`
+    : `Resolution format (${billType}) is associated with lower advancement rates than standard bills.`;
+
+  const explanation =
+    `Topic: ${topicLabel} bills have a historical enactment rate of ${topicRate.toFixed(2)}% in this dataset.\n\n` +
+    `Chamber: ${chamber}-originated bills enact at ${chamberRate}.\n\n` +
+    `Bill Type: ${typeNote}\n\n` +
+    `Session: The ${congress}th Congress has an estimated enactment rate of ${sessionRate} — enactment rates have declined across sessions.\n\n` +
+    (topic === 'artificial intelligence and machine learning policy'
+      ? `⚠ Note: No purely AI-focused bill has been enacted across any of the four sessions analyzed. Broader framing around cybersecurity or data privacy significantly improves advancement odds.`
+      : `Bills framed around broader technology policy rather than AI specifically tend to advance further, according to the ordinal regression model.`);
+
+  // Render result
+  const resultBox  = document.getElementById('resultBox');
+  const stageEl    = document.getElementById('resultStage');
+  const barEl      = document.getElementById('stageBar');
+  const expEl      = document.getElementById('resultExplanation');
+
+  stageEl.innerHTML = `Predicted Outcome: <span>${stageLabel}</span>`;
+  barEl.innerHTML = ['Introduced', 'Committee', 'Enacted'].map((s, i) =>
+    `<div class="stage-step ${i <= stage ? 'filled' : ''}" title="${s}"></div>`
+  ).join('');
+  expEl.style.whiteSpace = 'pre-line';
+  expEl.textContent = explanation;
+  resultBox.classList.add('show');
+  resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+</script>
+</body>
+</html>
